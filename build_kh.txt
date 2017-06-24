@@ -1,0 +1,143 @@
+build yocto 2210
+
+
+
+umask a+rx
+
+
+To build M3, please modify local.conf as following: SOC_FAMILY = "r8a7796"
+ re-use your current local.conf and bblayers.conf
+DTV module, build error occurs
+root --> usr/0
+-----------------------------------------
+Please execute below command:
+$ source poky/oe-init-build-env $BUILD_DIR
+$ bitbake -c menuconfig linux-renesas (config your kernel here, enable CONFIG_FTRACE)
+$ bitbake -C compile linux-renesas
+$ bitbake core-image-weston
+
+
+
+-----------------------------------------
+
+export BINARIES_DIR=/shsv/Android/SoftIP/24_thuantruong/yocto/binaries_dir/v2210_2nd_SI
+
+cd yocto/v2110
+git clone /shsv/SS2/RSS1/24_thuantruong/repository/poky/.git
+git checkout -b tmp cca8dd15c8096626052f6d8d25ff1e9a606104a3
+$patch -p1 < /shsv/SS2/RSS1/25_MyNguyen/0001-gitsm-Work-around-to-build-offline.patch
+
+
+git clone /shsv/SS2/RSS1/24_thuantruong/repository/meta-linaro/.git
+git checkout -b tmp 2f51d38048599d9878f149d6d15539fb97603f8f
+patch -p1 < /shsv/SS2/RSS1/25_MyNguyen/0001-python-wand-Fix-issue-to-build-offline.patch
+
+git clone /shsv/SS2/RSS1/24_thuantruong/repository/meta-openembedded/.git
+git checkout -b tmp 55c8a76da5dc099a7bc3838495c672140cedb78e
+
+git clone /shsv/SS2/RSS1/24_thuantruong/repository/meta-renesas/.git
+git checkout -b tmp f68c5217e12735615acd502905125f91bfbd6e6c
+sh meta-rcar-gen3/docs/sample/copyscript/copy_proprietary_softwares.sh $BINARIES_DIR
+vi meta-renesas/meta-rcar-gen3/recipes-multimedia/gstreamer/gstreamer1.0-omx_1.2.0.bbappend
+	--> git -> gitsm
+vi meta-renesas/meta-rcar-gen3/recipes-multimedia/gstreamer/gstreamer1.0-plugins-bad_1.6.3.bbappend
+vi meta-renesas/meta-rcar-gen3/recipes-multimedia/gstreamer/gstreamer1.0-plugins-good_1.6.3.bbappend
+
+git clone /shsv/SS2/RSS1/24_thuantruong/repository/meta-testapps/.git
+git checkout -b tmp SE/YBSP2.19_1st_SI
+sh copyscript/copy_adsp_sofwares.sh $BINARIES_DIR
+
+git clone /shsv/SS2/RSS1/24_thuantruong/repository/meta-fuego/.git
+git checkout -b tmp Mar_2017
+
+
+source poky/oe-init-build-env $BUILD_DIR 
+	conf/bblayers.conf ->feature enablibng 
+	local.conf
+	poky/meta/classes/sanity.bbclass
+
+	 
+bitbake core-image-weston
+
+
+-----------------
+source 
+		step 1 copy
+For BSP only: it means no Graphic and MMP modules:
+
+cp ../meta-renesas/meta-rcar-gen3/docs/sample/conf/salvator-x/linaro-gcc/bsp/local-wayland.conf conf/local.conf
+cp ../meta-renesas/meta-rcar-gen3/docs/sample/conf/salvator-x/linaro-gcc/bsp/bblayers.conf conf/bblayers.conf
+echo "BB_NO_NETWORK = \"1\"" >> conf/local.conf
+
+For GFX: it means video and audio can not work
+
+cp ../meta-renesas/meta-rcar-gen3/docs/sample/conf/salvator-x/linaro-gcc/gfx-only/local-wayland.conf conf/local.conf
+cp ../meta-renesas/meta-rcar-gen3/docs/sample/conf/salvator-x/linaro-gcc/gfx-only/bblayers.conf conf/bblayers.conf
+echo "BB_NO_NETWORK = \"1\"" >> conf/local.conf
+
+For MMP: can play graphic apps, video and audio playback. (RECOMMEND)
+
+cp ../meta-renesas/meta-rcar-gen3/docs/sample/conf/salvator-x/linaro-gcc/mmp/local-wayland.conf conf/local.conf
+cp ../meta-renesas/meta-rcar-gen3/docs/sample/conf/salvator-x/linaro-gcc/mmp/bblayers.conf conf/bblayers.conf
+echo "BB_NO_NETWORK = \"1\"" >> conf/local.conf
+                
+		step 2       vi  conf/bblayers.conf
+-------------------------------------------------------------------------------------
+# POKY_BBLAYERS_CONF_VERSION is increased each time build/conf/bblayers.conf
+# changes incompatibly
+POKY_BBLAYERS_CONF_VERSION = "2" 
+
+BBPATH = "${TOPDIR}" 
+BBFILES ?= "" 
+
+BBLAYERS ?= " \
+${TOPDIR}/../poky/meta \
+${TOPDIR}/../poky/meta-poky \
+${TOPDIR}/../poky/meta-yocto-bsp \
+${TOPDIR}/../meta-renesas/meta-rcar-gen3 \
+${TOPDIR}/../meta-linaro/meta-linaro-toolchain \
+${TOPDIR}/../meta-linaro/meta-optee \
+${TOPDIR}/../meta-openembedded/meta-oe \
+${TOPDIR}/../meta-openembedded/meta-multimedia \
+${TOPDIR}/../meta-openembedded/meta-networking \
+${TOPDIR}/../meta-openembedded/meta-python \
+${TOPDIR}/../meta-openembedded/meta-systemd \
+${TOPDIR}/../meta-fuego \
+${TOPDIR}/../meta-testapps \
+"              
+---------------------------------------------------------------------
+
+conf/local.conf
+------------------------------------------------------------------------
+FEATURES:(enable by command or uncommnd #)
+    DISTRO_FEATURES_append = " v4l2-renderer" 
+    DISTRO_FEATURES_append = " h264dec_lib" 
+    DISTRO_FEATURES_append = " h264enc_lib" 
+    DISTRO_FEATURES_append = " h265dec_lib" 
+    DISTRO_FEATURES_append = " mpeg2dec_lib" 
+    DISTRO_FEATURES_append = " mpeg4dec_lib" 
+    DISTRO_FEATURES_append = " vc1dec_lib" 
+    DISTRO_FEATURES_append = " aaclcdvi ec_lib" 
+    DISTRO_FEATURES_append = " aaclcdec_mdw" 
+    DISTRO_FEATURES_append = " wmadec_lib" 
+    DISTRO_FEATURES_append = " wmadec_mdw" 
+    DISTRO_FEATURES_append = " adsp" 
+
+	
+---------------------------------------------------------------------------------
+
+Step 5: 
+poky/meta/classes/sanity.bbclass
+[Before]
+
+# Check that TMPDIR isn't located on nfs
+    status.addresult(check_not_nfs(tmpdir, "TMPDIR"))
+
+[After]
+
+# Check that TMPDIR isn't located on nfs
+#    status.addresult(check_not_nfs(tmpdir, "TMPDIR"))
+
+Step 6: 
+cd /build
+bitbake core-image-weston
